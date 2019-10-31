@@ -32,7 +32,10 @@ The following example creates a Kafka cluster with 5 brokers and a configured Zo
 
 The IP addresses of started Kafka brokers are printed as `kafka_addr` and the names of Docker containers are exported as `kafka_name`.
 
+Run the commands in the `kafkadev_local` directory:
+
 <pre>
+<b>$ terraform init</b>
 <b>$ terraform apply</b>
 
 var.kafka_count
