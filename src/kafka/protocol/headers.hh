@@ -23,32 +23,26 @@
 #pragma once
 
 #include "kafka_primitives.hh"
-#include "metadata_response.hh"
 
 namespace seastar {
 
 namespace kafka {
 
-class metadata_request_topic {
+class request_header {
 public:
-    kafka_string_t _name;
+    kafka_int16_t _api_key;
+    kafka_int16_t _api_version;
+    kafka_int32_t _correlation_id;
+    kafka_nullable_string_t _client_id;
 
     void serialize(std::ostream &os, int16_t api_version) const;
 
     void deserialize(std::istream &is, int16_t api_version);
 };
 
-class metadata_request {
+class response_header {
 public:
-    using response_type = metadata_response;
-    static constexpr int16_t API_KEY = 3;
-    static constexpr int16_t MIN_SUPPORTED_VERSION = 1; // Kafka 0.10.0.0
-    static constexpr int16_t MAX_SUPPORTED_VERSION = 8;
-
-    kafka_array_t<metadata_request_topic> _topics;
-    kafka_bool_t _allow_auto_topic_creation;
-    kafka_bool_t _include_cluster_authorized_operations;
-    kafka_bool_t _include_topic_authorized_operations;
+    kafka_int32_t _correlation_id;
 
     void serialize(std::ostream &os, int16_t api_version) const;
 
