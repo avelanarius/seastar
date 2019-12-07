@@ -37,7 +37,7 @@ int main(int ac, char** av) {
 
     return app.run(ac, av, [&app] {
         return seastar::async([&app] {
-            auto &&config = app.configuration();
+            auto&& config = app.configuration();
             std::string host = config["host"].as<std::string>();
             uint16_t port = config["port"].as<uint16_t>();
             (void) port;

@@ -24,8 +24,7 @@
 
 #include <string>
 
-
-#include "../../../../src/kafka/connection/tcp_connection.hh"
+#include "../../../../src/kafka/connection/kafka_connection.hh"
 
 #include <seastar/core/future.hh>
 #include <seastar/net/net.hh>
@@ -37,14 +36,7 @@ namespace kafka {
 class kafka_producer {
 private:
     std::string _client_id;
-    int32_t _correlation_id;
-    connected_socket _socket;
-    lw_shared_ptr<tcp_connection> _connection;
-
-    seastar::future<int32_t> send_request(int16_t api_key, int16_t api_version,
-            const char *payload, size_t payload_length);
-
-    seastar::future<temporary_buffer<char>> receive_response();
+    lw_shared_ptr<kafka_connection> _connection;
 
     seastar::future<> refresh_metadata();
 
