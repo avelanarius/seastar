@@ -50,7 +50,7 @@ kafka_producer::kafka_producer(std::string client_id) {
 }
 
 seastar::future<> kafka_producer::init(std::string server_address, uint16_t port) {
-    auto connection_future = kafka_connection::connect(server_address, port, _client_id).then([this] (auto connection) {
+    auto connection_future = kafka_connection::connect(server_address, port, _client_id, 500).then([this] (auto connection) {
         _connection = connection;
     });
 

@@ -110,7 +110,7 @@ private:
 
 public:
     static future<lw_shared_ptr<kafka_connection>> connect(const std::string& host, uint16_t port,
-            const std::string &client_id);
+            const std::string &client_id, uint32_t timeout_ms);
 
     kafka_connection(lw_shared_ptr<tcp_connection> connection, std::string client_id) :
         _connection(std::move(connection)),
