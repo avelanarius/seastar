@@ -127,6 +127,22 @@ public:
         auto request_future = send_request(request, api_version);
         auto response_future = request_future.then([this, api_version] (int32_t correlation_id) {
             return receive_response<RequestType>(correlation_id, api_version);
+        }).handle_exception([] (auto ep) {
+            try {
+                std::rethrow_exception(ep);
+            } catch (seastar::timed_out_error &e) {
+                typename RequestType::response_type response;
+                response._error_code = 7;
+                return response;
+            } catch (parsing_exception &e) {
+                typename RequestType::response_type response;
+                response._error_code = 2;
+                return response;
+            } catch (...) {
+                typename RequestType::response_type response;
+                response._error_code = 13;
+                return response;
+            }
         });
         return response_future;
     }
