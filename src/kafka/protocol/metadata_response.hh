@@ -76,6 +76,7 @@ public:
     kafka_int32_t _controller_id;
     kafka_array_t<metadata_response_topic> _topics;
     kafka_int32_t _cluster_authorized_operations;
+    kafka_int16_t _error_code;
 
     void serialize(std::ostream &os, int16_t api_version) const;
 
