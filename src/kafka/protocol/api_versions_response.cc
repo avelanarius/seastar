@@ -65,6 +65,11 @@ bool api_versions_response::contains(int16_t api_key) const {
 
 void api_versions_response::serialize(std::ostream &os, int16_t api_version) const {
     _error_code.serialize(os, api_version);
+    if (*_error_code == 35) {
+        // If UNSUPPORTED_VERSION then
+        // the broker sends the response in version 0.
+        api_version = 0;
+    }
     _api_keys.serialize(os, api_version);
     if (api_version >= 1) {
         _throttle_time_ms.serialize(os, api_version);
@@ -73,6 +78,12 @@ void api_versions_response::serialize(std::ostream &os, int16_t api_version) con
 
 void api_versions_response::deserialize(std::istream &is, int16_t api_version) {
     _error_code.deserialize(is, api_version);
+    if (*_error_code == 35) {
+        // If we receive UNSUPPORTED_VERSION then
+        // the broker falls back to version 0 and
+        // sends response in that version.
+        api_version = 0;
+    }
     _api_keys.deserialize(is, api_version);
     std::sort(_api_keys->begin(), _api_keys->end());
     if (api_version >= 1) {

@@ -210,6 +210,12 @@ BOOST_AUTO_TEST_CASE(kafka_api_versions_response_parsing_test) {
     BOOST_REQUIRE_EQUAL(*response._api_keys[1]._api_key, 1);
     BOOST_REQUIRE_EQUAL(*response._api_keys[1]._min_version, 0);
     BOOST_REQUIRE_EQUAL(*response._api_keys[1]._max_version, 11);
+
+    test_deserialize_serialize({
+        0x00, 0x23, 0x00, 0x00, 0x00, 0x00
+    }, response, 2);
+    BOOST_REQUIRE_EQUAL(*response._error_code, 35);
+    BOOST_REQUIRE_EQUAL(response._api_keys->size(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(kafka_metadata_request_parsing_test) {
