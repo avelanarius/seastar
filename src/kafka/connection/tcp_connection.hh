@@ -31,6 +31,12 @@ namespace seastar {
 
 namespace kafka {
 
+struct tcp_connection_exception : public std::exception {
+    [[nodiscard]] const char *what() const noexcept override {
+        return "Error in connection.";
+    }
+};
+
 class tcp_connection {
 
     net::inet_address _host;
