@@ -31,6 +31,11 @@ namespace seastar {
 
 namespace kafka {
 
+struct tcp_connection_exception : public std::runtime_error {
+public:
+    tcp_connection_exception(const std::string& message) : runtime_error(message) {}
+};
+
 class tcp_connection {
 
     net::inet_address _host;
