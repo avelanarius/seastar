@@ -71,6 +71,7 @@ class produce_response {
 public:
     kafka_array_t<produce_response_topic_produce_response> _responses;
     kafka_int32_t _throttle_time_ms;
+    kafka_int16_t _error_code;
 
     void serialize(std::ostream &os, int16_t api_version) const;
 
