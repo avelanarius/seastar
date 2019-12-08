@@ -35,6 +35,12 @@ namespace seastar {
 
 namespace kafka {
 
+struct kafka_connection_exception : public std::exception {
+    [[nodiscard]] const char *what() const noexcept override {
+        return "Error in connection.";
+    }
+};
+
 class kafka_connection {
 private:
     lw_shared_ptr<tcp_connection> _connection;
