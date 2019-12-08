@@ -46,7 +46,15 @@ future<lw_shared_ptr<tcp_connection>> tcp_connection::connect(const std::string&
 }
 
 future<temporary_buffer<char>> tcp_connection::read(size_t bytes) {
-    auto f = _read_buf.read_exactly(bytes);
+    auto f = _read_buf.read_exactly(bytes)
+        .then([this, bytes](temporary_buffer<char> data) {
+            if (data.size() != bytes) {
+                _fd.shutdown_input();
+                _fd.shutdown_output();
+                throw tcp_connection_exception("Connection ended prematurely");
+            }
+            return data;
+        });
     return seastar::with_timeout(timeout_end(_timeout_ms), std::move(f));
 }
 
