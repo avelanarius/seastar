@@ -89,6 +89,7 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
     record._offset_delta = 0;
     record._key = key;
     record._value = value;
+    record._headers = std::vector<kafka::kafka_record_header>();
 
     record_batch._records.push_back(record);
     records._record_batches.push_back(record_batch);
