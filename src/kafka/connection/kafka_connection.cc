@@ -46,6 +46,10 @@ future<> kafka_connection::init() {
             });
 }
 
+future<> kafka_connection::close() {
+    return _connection->close();
+}
+
 }
 
 }

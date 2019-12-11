@@ -117,6 +117,8 @@ public:
         _client_id(std::move(client_id)),
         _correlation_id(0) {}
 
+    future<> close();
+
     template<typename RequestType>
     future<typename RequestType::response_type> send(const RequestType& request) {
         return send(request, _api_versions.max_version<RequestType>());
