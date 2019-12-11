@@ -22,34 +22,31 @@
 
 #pragma once
 
-#include <string>
+#include "kafka_connection.hh"
+#include "../protocol/metadata_response.hh"
+#include "../protocol/metadata_request.hh"
 
-
-#include "../../../../src/kafka/connection/connection_manager.hh"
-#include "../../../../src/kafka/utils/partitioner.hh"
-
-#include <seastar/core/future.hh>
-#include <seastar/net/net.hh>
+#include <unordered_map>
 
 namespace seastar {
 
 namespace kafka {
 
-class kafka_producer {
+class connection_manager {
 
-private:
-
+    std::unordered_map<std::string, lw_shared_ptr<kafka_connection>> _connections;
     std::string _client_id;
-    int32_t _correlation_id;
-    connection_manager _connection_manager;
-    partitioner _partitioner;
-
-    seastar::future<metadata_response> refresh_metadata();
 
 public:
-    kafka_producer(std::string client_id);
-    seastar::future<> init(std::string server_address, uint16_t port);
-    seastar::future<> produce(std::string topic_name, std::string key, std::string value);
+
+    explicit connection_manager(const std::string& client_id)
+        : _client_id(client_id) {};
+
+    future<> connect(const std::string& host, uint16_t port);
+    std::optional<lw_shared_ptr<kafka_connection>> get_connection(const std::string& host);
+    future<> disconnect(const std::string& host);
+
+    future<metadata_response> ask_for_metadata(const metadata_request& request);
 
 };
 

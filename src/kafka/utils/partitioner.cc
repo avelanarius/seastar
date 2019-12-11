@@ -20,38 +20,16 @@
  * Copyright (C) 2019 ScyllaDB Ltd.
  */
 
-#pragma once
-
-#include <string>
-
-
-#include "../../../../src/kafka/connection/connection_manager.hh"
-#include "../../../../src/kafka/utils/partitioner.hh"
-
-#include <seastar/core/future.hh>
-#include <seastar/net/net.hh>
+#include "partitioner.hh"
 
 namespace seastar {
 
 namespace kafka {
 
-class kafka_producer {
-
-private:
-
-    std::string _client_id;
-    int32_t _correlation_id;
-    connection_manager _connection_manager;
-    partitioner _partitioner;
-
-    seastar::future<metadata_response> refresh_metadata();
-
-public:
-    kafka_producer(std::string client_id);
-    seastar::future<> init(std::string server_address, uint16_t port);
-    seastar::future<> produce(std::string topic_name, std::string key, std::string value);
-
-};
+metadata_response_partition partitioner::get_partition(const std::string &key, const kafka_array_t<metadata_response_partition> &partitions) const {
+    size_t index = std::rand() % (*partitions).size();
+    return (*partitions).at(index);
+}
 
 }
 
