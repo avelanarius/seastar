@@ -210,12 +210,6 @@ BOOST_AUTO_TEST_CASE(kafka_api_versions_response_parsing_test) {
     BOOST_REQUIRE_EQUAL(*response._api_keys[1]._api_key, 1);
     BOOST_REQUIRE_EQUAL(*response._api_keys[1]._min_version, 0);
     BOOST_REQUIRE_EQUAL(*response._api_keys[1]._max_version, 11);
-
-    test_deserialize_serialize({
-        0x00, 0x23, 0x00, 0x00, 0x00, 0x00
-    }, response, 2);
-    BOOST_REQUIRE_EQUAL(*response._error_code, 35);
-    BOOST_REQUIRE_EQUAL(response._api_keys->size(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(kafka_metadata_request_parsing_test) {
@@ -274,24 +268,24 @@ BOOST_AUTO_TEST_CASE(kafka_record_parsing_test) {
     test_deserialize_serialize({
         0x20, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00
-    }, record, 2);
+    }, record, 0);
     BOOST_REQUIRE_EQUAL(*record._timestamp_delta, 0);
     BOOST_REQUIRE_EQUAL(*record._offset_delta, 0);
     std::string expected_key{"\x00\x00\x00\x01", 4};
-    BOOST_REQUIRE_EQUAL(*record._key, expected_key);
+    BOOST_REQUIRE_EQUAL(record._key, expected_key);
     std::string expected_value{"\x00\x00\x00\x00\x00\x00", 6};
-    BOOST_REQUIRE_EQUAL(*record._value, expected_value);
-    BOOST_REQUIRE_EQUAL(record._headers->size(), 0);
+    BOOST_REQUIRE_EQUAL(record._value, expected_value);
+    BOOST_REQUIRE_EQUAL(record._headers.size(), 0);
 
     kafka::kafka_record record2;
     test_deserialize_serialize({
         0x10, 0x00, 0x00, 0x00, 0x02, 0x34, 0x02, 0x36, 0x00
-    }, record2, 2);
+    }, record2, 0);
     BOOST_REQUIRE_EQUAL(*record2._timestamp_delta, 0);
     BOOST_REQUIRE_EQUAL(*record2._offset_delta, 0);
-    BOOST_REQUIRE_EQUAL(*record2._key, "4");
-    BOOST_REQUIRE_EQUAL(*record2._value, "6");
-    BOOST_REQUIRE_EQUAL(record2._headers->size(), 0);
+    BOOST_REQUIRE_EQUAL(record2._key, "4");
+    BOOST_REQUIRE_EQUAL(record2._value, "6");
+    BOOST_REQUIRE_EQUAL(record2._headers.size(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(kafka_record_batch_parsing_test) {
@@ -302,13 +296,13 @@ BOOST_AUTO_TEST_CASE(kafka_record_batch_parsing_test) {
         0x2b, 0x03, 0x41, 0x00, 0x00, 0x01, 0x6e, 0xb3, 0x2b, 0x03, 0x41, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00,
         0x00, 0x02, 0x34, 0x02, 0x34, 0x00
-    }, batch, 2);
+    }, batch, 0);
 
     BOOST_REQUIRE_EQUAL(*batch._base_offset, 4);
     BOOST_REQUIRE_EQUAL(*batch._partition_leader_epoch, 0);
     BOOST_REQUIRE_EQUAL(*batch._magic, 2);
-    BOOST_REQUIRE_EQUAL(batch._compression_type, kafka::kafka_record_compression_type::NO_COMPRESSION);
-    BOOST_REQUIRE_EQUAL(batch._timestamp_type, kafka::kafka_record_timestamp_type::CREATE_TIME);
+    BOOST_REQUIRE(batch._compression_type == kafka::kafka_record_compression_type::NO_COMPRESSION);
+    BOOST_REQUIRE(batch._timestamp_type == kafka::kafka_record_timestamp_type::CREATE_TIME);
     BOOST_REQUIRE(batch._is_transactional);
     BOOST_REQUIRE(!batch._is_control_batch);
     BOOST_REQUIRE_EQUAL(*batch._first_timestamp, 0x16eb32b0341);
@@ -318,9 +312,9 @@ BOOST_AUTO_TEST_CASE(kafka_record_batch_parsing_test) {
     BOOST_REQUIRE_EQUAL(batch._records.size(), 1);
     BOOST_REQUIRE_EQUAL(*batch._records[0]._timestamp_delta, 0);
     BOOST_REQUIRE_EQUAL(*batch._records[0]._offset_delta, 0);
-    BOOST_REQUIRE_EQUAL(*batch._records[0]._key, "4");
-    BOOST_REQUIRE_EQUAL(*batch._records[0]._value, "4");
-    BOOST_REQUIRE_EQUAL(batch._records[0]._headers->size(), 0);
+    BOOST_REQUIRE_EQUAL(batch._records[0]._key, "4");
+    BOOST_REQUIRE_EQUAL(batch._records[0]._value, "4");
+    BOOST_REQUIRE_EQUAL(batch._records[0]._headers.size(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(kafka_records_parsing_test) {
@@ -368,14 +362,14 @@ BOOST_AUTO_TEST_CASE(kafka_records_parsing_test) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00,
         0x01, 0x20, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00
-    }, records, 2);
+    }, records, 0);
 
     BOOST_REQUIRE_EQUAL(records._record_batches.size(), 9);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._base_offset, 0);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._partition_leader_epoch, 0);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._magic, 2);
-    BOOST_REQUIRE_EQUAL(records._record_batches[0]._compression_type, kafka::kafka_record_compression_type::NO_COMPRESSION);
-    BOOST_REQUIRE_EQUAL(records._record_batches[0]._timestamp_type, kafka::kafka_record_timestamp_type::CREATE_TIME);
+    BOOST_REQUIRE(records._record_batches[0]._compression_type == kafka::kafka_record_compression_type::NO_COMPRESSION);
+    BOOST_REQUIRE(records._record_batches[0]._timestamp_type == kafka::kafka_record_timestamp_type::CREATE_TIME);
     BOOST_REQUIRE(records._record_batches[0]._is_transactional);
     BOOST_REQUIRE(!records._record_batches[0]._is_control_batch);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._first_timestamp, 0x16eb32b014b);
@@ -385,14 +379,14 @@ BOOST_AUTO_TEST_CASE(kafka_records_parsing_test) {
     BOOST_REQUIRE_EQUAL(records._record_batches[0]._records.size(), 1);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._records[0]._timestamp_delta, 0);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._records[0]._offset_delta, 0);
-    BOOST_REQUIRE_EQUAL(*records._record_batches[0]._records[0]._key, "1");
-    BOOST_REQUIRE_EQUAL(*records._record_batches[0]._records[0]._value, "1");
-    BOOST_REQUIRE_EQUAL(records._record_batches[0]._records[0]._headers->size(), 0);
+    BOOST_REQUIRE_EQUAL(records._record_batches[0]._records[0]._key, "1");
+    BOOST_REQUIRE_EQUAL(records._record_batches[0]._records[0]._value, "1");
+    BOOST_REQUIRE_EQUAL(records._record_batches[0]._records[0]._headers.size(), 0);
     BOOST_REQUIRE_EQUAL(*records._record_batches[2]._base_offset, 2);
     BOOST_REQUIRE_EQUAL(*records._record_batches[2]._partition_leader_epoch, 0);
     BOOST_REQUIRE_EQUAL(*records._record_batches[2]._magic, 2);
-    BOOST_REQUIRE_EQUAL(records._record_batches[2]._compression_type, kafka::kafka_record_compression_type::NO_COMPRESSION);
-    BOOST_REQUIRE_EQUAL(records._record_batches[2]._timestamp_type, kafka::kafka_record_timestamp_type::CREATE_TIME);
+    BOOST_REQUIRE(records._record_batches[2]._compression_type == kafka::kafka_record_compression_type::NO_COMPRESSION);
+    BOOST_REQUIRE(records._record_batches[2]._timestamp_type == kafka::kafka_record_timestamp_type::CREATE_TIME);
     BOOST_REQUIRE(records._record_batches[2]._is_transactional);
     BOOST_REQUIRE(records._record_batches[2]._is_control_batch);
     BOOST_REQUIRE_EQUAL(*records._record_batches[2]._first_timestamp, 0x16eb32b02bb);
@@ -404,34 +398,9 @@ BOOST_AUTO_TEST_CASE(kafka_records_parsing_test) {
     BOOST_REQUIRE_EQUAL(*records._record_batches[2]._records[0]._offset_delta, 0);
     std::string expected_key{"\x00\x00\x00\x01", 4};
     std::string expected_value{"\x00\x00\x00\x00\x00\x00", 6};
-    BOOST_REQUIRE_EQUAL(*records._record_batches[2]._records[0]._key, expected_key);
-    BOOST_REQUIRE_EQUAL(*records._record_batches[2]._records[0]._value, expected_value);
-    BOOST_REQUIRE_EQUAL(records._record_batches[2]._records[0]._headers->size(), 0);
-
-    kafka::kafka_records records2;
-    test_deserialize_serialize({
-        0x00, 0x00, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1e,
-        0x99, 0x75, 0x80, 0x05, 0x01, 0x00, 0x00, 0x00, 0x01, 0x6e, 0xec, 0x15, 0xd9, 0x37, 0xff, 0xff,
-        0xff, 0xff, 0x00, 0x00, 0x00, 0x08, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x32
-    }, records2, 1);
-    BOOST_REQUIRE_EQUAL(records2._record_batches.size(), 1);
-    BOOST_REQUIRE_EQUAL(*records2._record_batches[0]._base_offset, 0);
-    BOOST_REQUIRE_EQUAL(*records2._record_batches[0]._partition_leader_epoch, 0);
-    BOOST_REQUIRE_EQUAL(*records2._record_batches[0]._magic, 1);
-    BOOST_REQUIRE_EQUAL(records2._record_batches[0]._compression_type, kafka::kafka_record_compression_type::NO_COMPRESSION);
-    BOOST_REQUIRE_EQUAL(records2._record_batches[0]._timestamp_type, kafka::kafka_record_timestamp_type::CREATE_TIME);
-    BOOST_REQUIRE(!records2._record_batches[0]._is_transactional);
-    BOOST_REQUIRE(!records2._record_batches[0]._is_control_batch);
-    BOOST_REQUIRE_EQUAL(*records2._record_batches[0]._first_timestamp, 0x16eec15d937);
-    BOOST_REQUIRE_EQUAL(*records2._record_batches[0]._producer_id, 0);
-    BOOST_REQUIRE_EQUAL(*records2._record_batches[0]._producer_epoch, 0);
-    BOOST_REQUIRE_EQUAL(*records2._record_batches[0]._base_sequence, 0);
-    BOOST_REQUIRE_EQUAL(records2._record_batches[0]._records.size(), 1);
-    BOOST_REQUIRE_EQUAL(*records2._record_batches[0]._records[0]._timestamp_delta, 0);
-    BOOST_REQUIRE_EQUAL(*records2._record_batches[0]._records[0]._offset_delta, 0);
-    BOOST_REQUIRE(records2._record_batches[0]._records[0]._key.is_null());
-    BOOST_REQUIRE_EQUAL(*records2._record_batches[0]._records[0]._value, "message2");
-    BOOST_REQUIRE(records2._record_batches[0]._records[0]._headers.is_null());
+    BOOST_REQUIRE_EQUAL(records._record_batches[2]._records[0]._key, expected_key);
+    BOOST_REQUIRE_EQUAL(records._record_batches[2]._records[0]._value, expected_value);
+    BOOST_REQUIRE_EQUAL(records._record_batches[2]._records[0]._headers.size(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(kafka_produce_request_parsing_test) {
@@ -458,8 +427,8 @@ BOOST_AUTO_TEST_CASE(kafka_produce_request_parsing_test) {
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._base_offset, 0);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._partition_leader_epoch, -1);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._magic, 2);
-    BOOST_REQUIRE_EQUAL(records._record_batches[0]._compression_type, kafka::kafka_record_compression_type::NO_COMPRESSION);
-    BOOST_REQUIRE_EQUAL(records._record_batches[0]._timestamp_type, kafka::kafka_record_timestamp_type::CREATE_TIME);
+    BOOST_REQUIRE(records._record_batches[0]._compression_type == kafka::kafka_record_compression_type::NO_COMPRESSION);
+    BOOST_REQUIRE(records._record_batches[0]._timestamp_type == kafka::kafka_record_timestamp_type::CREATE_TIME);
     BOOST_REQUIRE(!records._record_batches[0]._is_transactional);
     BOOST_REQUIRE(!records._record_batches[0]._is_control_batch);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._first_timestamp, 0x16e5b6eba2c);
@@ -469,9 +438,9 @@ BOOST_AUTO_TEST_CASE(kafka_produce_request_parsing_test) {
     BOOST_REQUIRE_EQUAL(records._record_batches[0]._records.size(), 1);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._records[0]._timestamp_delta, 0);
     BOOST_REQUIRE_EQUAL(*records._record_batches[0]._records[0]._offset_delta, 0);
-    BOOST_REQUIRE_EQUAL(*records._record_batches[0]._records[0]._key, "0");
-    BOOST_REQUIRE_EQUAL(*records._record_batches[0]._records[0]._value, "0");
-    BOOST_REQUIRE_EQUAL(records._record_batches[0]._records[0]._headers->size(), 0);
+    BOOST_REQUIRE_EQUAL(records._record_batches[0]._records[0]._key, "0");
+    BOOST_REQUIRE_EQUAL(records._record_batches[0]._records[0]._value, "0");
+    BOOST_REQUIRE_EQUAL(records._record_batches[0]._records[0]._headers.size(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(kafka_produce_response_parsing_test) {

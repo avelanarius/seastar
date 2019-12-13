@@ -35,12 +35,6 @@ namespace seastar {
 
 namespace kafka {
 
-struct kafka_connection_exception : public std::exception {
-    [[nodiscard]] const char *what() const noexcept override {
-        return "Error in connection.";
-    }
-};
-
 class kafka_connection {
 private:
     lw_shared_ptr<tcp_connection> _connection;
@@ -49,7 +43,7 @@ private:
     api_versions_response _api_versions;
 
     template<typename RequestType>
-    future<int32_t> send_request(const RequestType &request, int16_t api_version) {
+    future<int32_t> send_request(const RequestType& request, int16_t api_version) {
         auto assigned_correlation_id = _correlation_id++;
 
         std::vector<char> header;
@@ -102,7 +96,7 @@ private:
             kafka::response_header response_header;
             response_header.deserialize(response_stream, 0);
             if (*response_header._correlation_id != correlation_id) {
-                throw parsing_exception();
+                throw parsing_exception("Received invalid correlation id");
             }
 
             typename RequestType::response_type deserialized_response;
@@ -116,7 +110,7 @@ private:
 
 public:
     static future<lw_shared_ptr<kafka_connection>> connect(const std::string& host, uint16_t port,
-            const std::string &client_id, uint32_t timeout_ms);
+            const std::string& client_id, uint32_t timeout_ms);
 
     kafka_connection(lw_shared_ptr<tcp_connection> connection, std::string client_id) :
         _connection(std::move(connection)),
@@ -124,23 +118,23 @@ public:
         _correlation_id(0) {}
 
     template<typename RequestType>
-    future<typename RequestType::response_type> send(const RequestType &request) {
+    future<typename RequestType::response_type> send(const RequestType& request) {
         return send(request, _api_versions.max_version<RequestType>());
     }
 
     template<typename RequestType>
-    future<typename RequestType::response_type> send(const RequestType &request, int16_t api_version) {
+    future<typename RequestType::response_type> send(const RequestType& request, int16_t api_version) {
         auto request_future = send_request(request, api_version);
         auto response_future = request_future.then([this, api_version] (int32_t correlation_id) {
             return receive_response<RequestType>(correlation_id, api_version);
         }).handle_exception([] (auto ep) {
             try {
                 std::rethrow_exception(ep);
-            } catch (seastar::timed_out_error &e) {
+            } catch (seastar::timed_out_error& e) {
                 typename RequestType::response_type response;
                 response._error_code = 7;
                 return response;
-            } catch (parsing_exception &e) {
+            } catch (parsing_exception& e) {
                 typename RequestType::response_type response;
                 response._error_code = 2;
                 return response;

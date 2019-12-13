@@ -32,8 +32,8 @@ namespace kafka {
 
 class kafka_record_header {
 public:
-    kafka_nullable_buffer_t<kafka_varint_t> _header_key;
-    kafka_nullable_buffer_t<kafka_varint_t> _value;
+    std::string _header_key;
+    std::string _value;
 
     void serialize(std::ostream &os, int16_t api_version) const;
 
@@ -44,32 +44,24 @@ class kafka_record {
 public:
     kafka_varint_t _timestamp_delta;
     kafka_varint_t _offset_delta;
-    kafka_nullable_bytes_t _key;
-    kafka_nullable_bytes_t _value;
-    kafka_array_t<kafka_record_header, kafka_varint_t> _headers;
+    std::string _key;
+    std::string _value;
+    std::vector<kafka_record_header> _headers;
 
     void serialize(std::ostream &os, int16_t api_version) const;
 
     void deserialize(std::istream &is, int16_t api_version);
 };
 
-enum kafka_record_compression_type {
+enum class kafka_record_compression_type {
     NO_COMPRESSION = 0, GZIP = 1, SNAPPY = 2, LZ4 = 3, ZSTD = 4
 };
 
-enum kafka_record_timestamp_type {
+enum class kafka_record_timestamp_type {
     CREATE_TIME = 0, LOG_APPEND_TIME = 1
 };
 
 class kafka_record_batch {
-private:
-    void serialize_v0_v1(std::ostream &os, int16_t api_version) const;
-
-    void deserialize_v0_v1(std::istream &is, int16_t api_version);
-
-    void serialize_v2(std::ostream &os, int16_t api_version) const;
-
-    void deserialize_v2(std::istream &is, int16_t api_version);
 public:
     kafka_int64_t _base_offset;
     kafka_int32_t _partition_leader_epoch;

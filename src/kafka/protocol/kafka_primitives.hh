@@ -34,10 +34,9 @@ namespace seastar {
 
 namespace kafka {
 
-struct parsing_exception : public std::exception {
-    [[nodiscard]] const char *what() const noexcept override {
-        return "Error parsing Kafka message.";
-    }
+struct parsing_exception : public std::runtime_error {
+public:
+    parsing_exception(const std::string& message) : runtime_error(message) {}
 };
 
 template<typename NumberType>
@@ -49,7 +48,7 @@ private:
 public:
     kafka_number_t() noexcept : kafka_number_t(0) {}
 
-    kafka_number_t(NumberType value) noexcept : _value(value) {}
+    explicit kafka_number_t(NumberType value) noexcept : _value(value) {}
 
     [[nodiscard]] const NumberType &operator*() const noexcept { return _value; }
 
@@ -73,7 +72,7 @@ public:
         std::array<char, NUMBER_SIZE> buffer{};
         is.read(buffer.data(), NUMBER_SIZE);
         if (is.gcount() != NUMBER_SIZE) {
-            throw parsing_exception();
+            throw parsing_exception("Stream ended prematurely when reading number");
         }
         _value = net::ntoh(*reinterpret_cast<NumberType *>(buffer.data()));
     }
@@ -92,7 +91,7 @@ private:
 public:
     kafka_varint_t() noexcept : kafka_varint_t(0) {}
 
-    kafka_varint_t(int32_t value) noexcept : _value(value) {}
+    explicit kafka_varint_t(int32_t value) noexcept : _value(value) {}
 
     [[nodiscard]] const int32_t &operator*() const noexcept { return _value; }
 
@@ -122,14 +121,14 @@ public:
         do {
             is.read(&current_byte, 1);
             if (is.gcount() != 1) {
-                throw parsing_exception();
+                throw parsing_exception("Stream ended prematurely when reading varint");
             }
             if (current_byte == 0) {
                 break;
             }
             auto max_bit_write = current_offset + 32 -  __builtin_clz(static_cast<uint8_t>(current_byte));
             if (max_bit_write > 32) {
-                throw parsing_exception();
+                throw parsing_exception("Deserialized varint is larger than 32 bits");
             }
             current_value |= static_cast<int32_t>(current_byte & 0x7F) << current_offset;
             current_offset += 7;
@@ -139,14 +138,14 @@ public:
     }
 };
 
-template<typename DefaultSizeType>
+template<typename SizeType>
 class kafka_buffer_t {
 private:
     std::string _value;
 public:
     kafka_buffer_t() noexcept = default;
 
-    kafka_buffer_t(std::string value) : _value(std::move(value)) {}
+    explicit kafka_buffer_t(std::string value) : _value(std::move(value)) {}
 
     [[nodiscard]] const std::string &operator*() const noexcept { return _value; }
 
@@ -166,7 +165,6 @@ public:
         return *this;
     }
 
-    template<typename SizeType=DefaultSizeType>
     void serialize(std::ostream &os, int16_t api_version) const {
         SizeType length(_value.size());
         length.serialize(os, api_version);
@@ -174,13 +172,12 @@ public:
         os.write(_value.data(), _value.size());
     }
 
-    template<typename SizeType=DefaultSizeType>
     void deserialize(std::istream &is, int16_t api_version) {
         SizeType length;
         length.deserialize(is, api_version);
         // TODO: Max length check
         if (*length < 0) {
-            throw parsing_exception();
+            throw parsing_exception("Length of buffer is negative");
         }
 
         std::string value;
@@ -188,13 +185,13 @@ public:
         is.read(value.data(), *length);
 
         if (is.gcount() != *length) {
-            throw parsing_exception();
+            throw parsing_exception("Stream ended prematurely when reading buffer");
         }
         _value.swap(value);
     }
 };
 
-template<typename DefaultSizeType>
+template<typename SizeType>
 class kafka_nullable_buffer_t {
 private:
     std::string _value;
@@ -202,7 +199,7 @@ private:
 public:
     kafka_nullable_buffer_t() noexcept : _is_null(true) {}
 
-    kafka_nullable_buffer_t(std::string value) : _value(std::move(value)), _is_null(false) {}
+    explicit kafka_nullable_buffer_t(std::string value) : _value(std::move(value)), _is_null(false) {}
 
     [[nodiscard]] bool is_null() const noexcept { return _is_null; }
 
@@ -251,7 +248,6 @@ public:
         return *this;
     }
 
-    template<typename SizeType=DefaultSizeType>
     void serialize(std::ostream &os, int16_t api_version) const {
         if (_is_null) {
             SizeType null_indicator(-1);
@@ -263,7 +259,6 @@ public:
         }
     }
 
-    template<typename SizeType=DefaultSizeType>
     void deserialize(std::istream &is, int16_t api_version) {
         SizeType length;
         length.deserialize(is, api_version);
@@ -274,14 +269,14 @@ public:
             is.read(value.data(), *length);
 
             if (is.gcount() != *length) {
-                throw parsing_exception();
+                throw parsing_exception("Stream ended prematurely when reading nullable buffer");
             }
             _value.swap(value);
             _is_null = false;
         } else if (*length == -1) {
             set_null();
         } else {
-            throw parsing_exception();
+            throw parsing_exception("Length of buffer is invalid");
         }
     }
 };
@@ -292,7 +287,7 @@ using kafka_nullable_string_t = kafka_nullable_buffer_t<kafka_int16_t>;
 using kafka_bytes_t = kafka_buffer_t<kafka_int32_t>;
 using kafka_nullable_bytes_t = kafka_nullable_buffer_t<kafka_int32_t>;
 
-template<typename ElementType, typename DefaultElementCountType = kafka_int32_t>
+template<typename ElementType, typename ElementCountType = kafka_int32_t>
 class kafka_array_t {
 private:
     std::vector<ElementType> _elems;
@@ -300,7 +295,7 @@ private:
 public:
     kafka_array_t() noexcept : _is_null(true) {}
 
-    kafka_array_t(std::vector<ElementType> elems) noexcept
+    explicit kafka_array_t(std::vector<ElementType> elems) noexcept
             : _elems(std::move(elems)), _is_null(false) {}
 
     [[nodiscard]] bool is_null() const noexcept { return _is_null; }
@@ -364,7 +359,6 @@ public:
         _is_null = true;
     }
 
-    template<typename ElementCountType=DefaultElementCountType>
     void serialize(std::ostream &os, int16_t api_version) const {
         if (_is_null) {
             ElementCountType null_indicator(-1);
@@ -378,7 +372,6 @@ public:
         }
     }
 
-    template<typename ElementCountType=DefaultElementCountType>
     void deserialize(std::istream &is, int16_t api_version) {
         ElementCountType length;
         length.deserialize(is, api_version);
@@ -393,7 +386,7 @@ public:
         } else if (*length == -1) {
             set_null();
         } else {
-            throw parsing_exception();
+            throw parsing_exception("Length of array is invalid");
         }
     }
 };

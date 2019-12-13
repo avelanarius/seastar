@@ -24,7 +24,6 @@
 
 #include <string>
 
-
 #include "../../../../src/kafka/connection/kafka_connection.hh"
 
 #include <seastar/core/future.hh>
@@ -37,8 +36,6 @@ namespace kafka {
 class kafka_producer {
 private:
     std::string _client_id;
-    int32_t _correlation_id;
-    connected_socket _socket;
     lw_shared_ptr<kafka_connection> _connection;
 
     seastar::future<> refresh_metadata();

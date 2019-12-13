@@ -44,10 +44,7 @@ namespace seastar {
 
 namespace kafka {
 
-kafka_producer::kafka_producer(std::string client_id) {
-    _correlation_id = 0;
-    _client_id = client_id;
-}
+kafka_producer::kafka_producer(std::string client_id) : _client_id(std::move(client_id)) {}
 
 seastar::future<> kafka_producer::init(std::string server_address, uint16_t port) {
     auto connection_future = kafka_connection::connect(server_address, port, _client_id, 500).then([this] (auto connection) {
@@ -92,7 +89,6 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
     record._offset_delta = 0;
     record._key = key;
     record._value = value;
-    record._headers = std::vector<kafka::kafka_record_header>();
 
     record_batch._records.push_back(record);
     records._record_batches.push_back(record_batch);

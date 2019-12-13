@@ -28,24 +28,12 @@ namespace kafka {
 
 void produce_request_partition_produce_data::serialize(std::ostream &os, int16_t api_version) const {
     _partition_index.serialize(os, api_version);
-    auto records_version = 0;
-    if (api_version >= 3) {
-        records_version = 2;
-    } else if (api_version >= 2) {
-        records_version = 1;
-    }
-    _records.serialize(os, records_version);
+    _records.serialize(os, api_version);
 }
 
 void produce_request_partition_produce_data::deserialize(std::istream &is, int16_t api_version) {
     _partition_index.deserialize(is, api_version);
-    auto records_version = 0;
-    if (api_version >= 3) {
-        records_version = 2;
-    } else if (api_version >= 2) {
-        records_version = 1;
-    }
-    _records.deserialize(is, records_version);
+    _records.deserialize(is, api_version);
 }
 
 void produce_request_topic_produce_data::serialize(std::ostream &os, int16_t api_version) const {

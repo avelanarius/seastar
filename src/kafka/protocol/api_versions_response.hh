@@ -28,10 +28,9 @@ namespace seastar {
 
 namespace kafka {
 
-struct unsupported_version_exception : public std::exception {
-    [[nodiscard]] const char *what() const noexcept override {
-        return "The client is not compatible with broker.";
-    }
+struct unsupported_version_exception : public std::runtime_error {
+public:
+    unsupported_version_exception(const std::string& message) : runtime_error(message) {}
 };
 
 class api_versions_response_key {
@@ -58,16 +57,13 @@ public:
     int16_t max_version() const {
         auto broker_versions = (*this)[RequestType::API_KEY];
         if (*broker_versions._api_key == -1) {
-            // Broker does not support specific request.
-            throw unsupported_version_exception();
+            throw unsupported_version_exception("Broker does not support specific request");
         }
         if (*broker_versions._max_version < RequestType::MIN_SUPPORTED_VERSION) {
-            // Broker is too old.
-            throw unsupported_version_exception();
+            throw unsupported_version_exception("Broker is too old");
         }
         if (*broker_versions._min_version > RequestType::MAX_SUPPORTED_VERSION) {
-            // Broker is too new.
-            throw unsupported_version_exception();
+            throw unsupported_version_exception("Broker is too new");
         }
         return std::min(*broker_versions._max_version, RequestType::MAX_SUPPORTED_VERSION);
     }

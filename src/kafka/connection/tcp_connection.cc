@@ -26,6 +26,10 @@ namespace seastar {
 
 namespace kafka {
 
+auto timeout_end(uint32_t timeout_ms) {
+    return std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+}
+
 future<lw_shared_ptr<tcp_connection>> tcp_connection::connect(const std::string& host, uint16_t port,
         uint32_t timeout_ms) {
     net::inet_address target_host = net::inet_address{host};
@@ -34,8 +38,7 @@ future<lw_shared_ptr<tcp_connection>> tcp_connection::connect(const std::string&
     auto f = target_host.is_ipv4()
             ? engine().net().connect(ipv4_addr{target_host, port}, socket, transport::TCP)
             : engine().net().connect(ipv6_addr{target_host, port}, socket, transport::TCP);
-    auto timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
-    auto f_timeout = seastar::with_timeout(timeout, std::move(f));
+    auto f_timeout = seastar::with_timeout(timeout_end(timeout_ms), std::move(f));
     return f_timeout.then([target_host = std::move(target_host), timeout_ms, port] (connected_socket fd) {
                 return make_lw_shared<tcp_connection>(target_host, port, timeout_ms, std::move(fd));
             }
@@ -48,20 +51,18 @@ future<temporary_buffer<char>> tcp_connection::read(size_t bytes) {
             if (data.size() != bytes) {
                 _fd.shutdown_input();
                 _fd.shutdown_output();
-                throw tcp_connection_exception();
+                throw tcp_connection_exception("Connection ended prematurely");
             }
             return data;
         });
-    auto timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(_timeout_ms);
-    return seastar::with_timeout(timeout, std::move(f));
+    return seastar::with_timeout(timeout_end(_timeout_ms), std::move(f));
 }
 
 future<> tcp_connection::write(temporary_buffer<char> buff) {
     auto f = _write_buf.write(std::move(buff)).then([this] {
         return _write_buf.flush();
     });
-    auto timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(_timeout_ms);
-    return seastar::with_timeout(timeout, std::move(f));
+    return seastar::with_timeout(timeout_end(_timeout_ms), std::move(f));
 }
 
 future<> tcp_connection::close() {

@@ -26,10 +26,10 @@ namespace seastar {
 
 namespace kafka {
 
-future<lw_shared_ptr<kafka_connection>> kafka_connection::connect(const std::string &host, uint16_t port,
-        const std::string &client_id, uint32_t timeout_ms) {
-    auto connection_fut = tcp_connection::connect(host, port, timeout_ms);
-    return connection_fut.then([client_id] (lw_shared_ptr<tcp_connection> connection) {
+future<lw_shared_ptr<kafka_connection>> kafka_connection::connect(const std::string& host, uint16_t port,
+        const std::string& client_id, uint32_t timeout_ms) {
+    return tcp_connection::connect(host, port, timeout_ms)
+    .then([client_id] (lw_shared_ptr<tcp_connection> connection) {
         return make_lw_shared<kafka_connection>(connection, client_id);
     }).then([] (lw_shared_ptr<kafka_connection> connection) {
         return connection->init().then([connection] {
@@ -41,26 +41,8 @@ future<lw_shared_ptr<kafka_connection>> kafka_connection::connect(const std::str
 future<> kafka_connection::init() {
     api_versions_request request;
     return send(request, api_versions_request::MAX_SUPPORTED_VERSION)
-            .then([this, request](api_versions_response response) {
-                if (*response._error_code == 35) {
-                    auto retry_version = api_versions_request::MIN_SUPPORTED_VERSION;
-                    if (response.contains(api_versions_request::API_KEY)) {
-                        retry_version = response.max_version<api_versions_request>();
-                    }
-                    return send(request, retry_version)
-                    .then([this](api_versions_response response) {
-                        if (*response._error_code != 0) {
-                            throw kafka_connection_exception();
-                        } else {
-                            _api_versions = response;
-                        }
-                    });
-                } else if (*response._error_code != 0) {
-                    throw kafka_connection_exception();
-                } else {
-                    _api_versions = response;
-                    return make_ready_future<>();
-                }
+            .then([this](api_versions_response response) {
+                _api_versions = response;
             });
 }
 
