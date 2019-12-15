@@ -47,17 +47,17 @@ private:
     std::random_device _rd;
     std::mt19937 _mt;
 
-    template<typename AsyncAction, typename DataType>
-    future<> with_retry(DataType& data, AsyncAction&& action, uint32_t retry_number) {
+    template<typename AsyncAction>
+    future<> with_retry(AsyncAction&& action, uint32_t retry_number) {
         if (retry_number >= _max_retry_count) {
             return make_ready_future<>();
         }
         return backoff(retry_number)
-        .then([this, &data, action = std::forward<AsyncAction>(action), retry_number]() mutable {
-            return futurize_apply(action, data)
-            .then([this, &data, action = std::forward<AsyncAction>(action), retry_number](auto do_retry_val) mutable {
+        .then([this, action = std::forward<AsyncAction>(action), retry_number]() mutable {
+            return futurize_apply(action)
+            .then([this, action = std::forward<AsyncAction>(action), retry_number](auto do_retry_val) mutable {
                 if (do_retry_val == do_retry::yes) {
-                    return with_retry(data, std::forward<AsyncAction>(action), retry_number + 1);
+                    return with_retry(std::forward<AsyncAction>(action), retry_number + 1);
                 } else {
                     return make_ready_future<>();
                 }
@@ -85,12 +85,9 @@ public:
     retry_helper(uint32_t max_retry_count, float base_ms, uint32_t max_backoff_ms)
         : _max_retry_count(max_retry_count), _base_ms(base_ms), _max_backoff_ms(max_backoff_ms), _mt(_rd()) {}
 
-    template<typename AsyncAction, typename DataType>
-    future<> with_retry(DataType&& data, AsyncAction&& action) {
-        return do_with(std::forward<DataType>(data),
-                [this, action = std::forward<AsyncAction>(action)](auto& data_ref) mutable {
-            return with_retry(data_ref, std::forward<AsyncAction>(action), 0);
-        });
+    template<typename AsyncAction>
+    future<> with_retry(AsyncAction&& action) {
+        return with_retry(std::forward<AsyncAction>(action), 0);
     }
 };
 

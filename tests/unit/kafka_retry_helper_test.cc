@@ -32,7 +32,8 @@ using namespace seastar;
 SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_early_stop) {
     kafka::retry_helper helper(5, 1, 1000);
     auto retry_count = 0;
-    helper.with_retry(0, [&retry_count](auto& data) {
+    auto data = 0;
+    helper.with_retry([&retry_count, data]() mutable {
         retry_count++;
         data++;
         if (data >= 3) {
@@ -46,7 +47,7 @@ SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_early_stop) {
 SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_capped_retries) {
     kafka::retry_helper helper(5, 1, 1000);
     auto retry_count = 0;
-    helper.with_retry(0, [&retry_count](auto& data) {
+    helper.with_retry([&retry_count] {
         retry_count++;
         return kafka::do_retry::yes;
     }).wait();
@@ -56,9 +57,10 @@ SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_capped_retries) {
 SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_modify_data) {
     kafka::retry_helper helper(5, 1, 1000);
     auto retry_count = 0;
+    std::vector<int> data{1, 2, 3};
     std::vector<int> retry_data;
 
-    helper.with_retry(std::vector<int>{1, 2, 3}, [&retry_count, &retry_data](auto& data) {
+    helper.with_retry([data = std::move(data), &retry_count, &retry_data]() mutable {
         if (data.empty()) {
             return kafka::do_retry::no;
         }
