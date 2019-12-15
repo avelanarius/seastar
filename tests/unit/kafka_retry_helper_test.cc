@@ -54,6 +54,16 @@ SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_capped_retries) {
     BOOST_REQUIRE_EQUAL(retry_count, 5);
 }
 
+SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_future) {
+    kafka::retry_helper helper(5, 1, 1000);
+    auto retry_count = 0;
+    helper.with_retry([&retry_count] {
+        retry_count++;
+        return make_ready_future<kafka::do_retry>(kafka::do_retry::yes);
+    }).wait();
+    BOOST_REQUIRE_EQUAL(retry_count, 5);
+}
+
 SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_modify_data) {
     kafka::retry_helper helper(5, 1, 1000);
     auto retry_count = 0;
