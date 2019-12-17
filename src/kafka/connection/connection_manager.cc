@@ -27,12 +27,15 @@ namespace seastar {
 namespace kafka {
 
 future<lw_shared_ptr<kafka_connection>> connection_manager::connect(const std::string& host, uint16_t port) {
-    auto conn = _connections.find({host, port});
-    return conn != _connections.end()
-        ? make_ready_future<lw_shared_ptr<kafka_connection>>(conn->second)
-        : kafka_connection::connect(host, port, _client_id, 500).then([this, host, port] (lw_shared_ptr<kafka_connection> conn) {
-            _connections.insert({{host, port}, conn});
-            return conn;
+    return with_semaphore(_connect_semaphore, 1, [this, host, port] {
+        auto conn = _connections.find({host, port});
+        return conn != _connections.end()
+               ? make_ready_future<lw_shared_ptr<kafka_connection>>(conn->second)
+               : kafka_connection::connect(host, port, _client_id, 500)
+               .then([this, host, port] (lw_shared_ptr<kafka_connection> conn) {
+                    _connections.insert({{host, port}, conn});
+                    return conn;
+                });
     });
 }
 
@@ -44,9 +47,9 @@ std::optional<lw_shared_ptr<kafka_connection>> connection_manager::get_connectio
 future<> connection_manager::disconnect(const connection_id& connection) {
     auto conn = _connections.find(connection);
     if (conn != _connections.end()) {
-        return conn->second->close().then([this, conn] {
-            _connections.erase(conn);
-        });
+        auto conn_ptr = conn->second;
+        _connections.erase(conn);
+        return conn_ptr->close().finally([conn_ptr]{});
     }
 
     return make_ready_future();
