@@ -38,7 +38,7 @@ namespace kafka {
         });
     }
 
-    metadata_response &metadata_manager::get_metadata() {
+    metadata_response& metadata_manager::get_metadata() {
         return _metadata;
     }
 }

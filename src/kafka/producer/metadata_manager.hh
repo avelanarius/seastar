@@ -36,11 +36,11 @@ private:
     metadata_response _metadata;
 
 public:
-    metadata_manager(lw_shared_ptr<connection_manager> &manager)
+    metadata_manager(lw_shared_ptr<connection_manager>& manager)
     : _connection_manager(manager) {}
 
     seastar::future<metadata_response> refresh_metadata();
-    metadata_response &get_metadata();
+    metadata_response& get_metadata();
 
 };
 

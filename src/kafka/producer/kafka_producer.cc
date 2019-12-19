@@ -60,7 +60,7 @@ seastar::future<> kafka_producer::init(std::string server_address, uint16_t port
 }
 
 seastar::future<> kafka_producer::produce(std::string topic_name, std::string key, std::string value) {
-    metadata_response &metadata = _metadata_manager.get_metadata();
+    metadata_response& metadata = _metadata_manager.get_metadata();
     // find metadata for our topic of interest
     metadata_response_topic topic_metadata;
     for (const auto& topic : *metadata._topics) {
