@@ -20,36 +20,27 @@
  * Copyright (C) 2019 ScyllaDB Ltd.
  */
 
-#pragma once
-
-#include <string>
-
-#include "../../../../src/kafka/connection/connection_manager.hh"
-#include "../../../../src/kafka/utils/partitioner.hh"
-#include "../../../../src/kafka/producer/metadata_manager.hh"
-
-#include <seastar/core/future.hh>
-#include <seastar/net/net.hh>
+#include "metadata_manager.hh"
 
 namespace seastar {
 
 namespace kafka {
 
-class kafka_producer {
-private:
+    seastar::future<metadata_response> metadata_manager::refresh_metadata() {
+        kafka::metadata_request req;
 
-    std::string _client_id;
-    lw_shared_ptr<connection_manager> _connection_manager;
-    partitioner _partitioner;
-    metadata_manager _metadata_manager;
+        req._allow_auto_topic_creation = true;
+        req._include_cluster_authorized_operations = true;
+        req._include_topic_authorized_operations = true;
 
-public:
-    explicit kafka_producer(std::string client_id);
-    seastar::future<> init(std::string server_address, uint16_t port);
-    seastar::future<> produce(std::string topic_name, std::string key, std::string value);
+        return _connection_manager->ask_for_metadata(req).then([this] (metadata_response metadata){
+            return (_metadata = metadata);
+        });
+    }
 
-};
-
+    metadata_response &metadata_manager::get_metadata() {
+        return _metadata;
+    }
 }
 
 }

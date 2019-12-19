@@ -319,9 +319,6 @@ seastar_add_test (kafka_protocol
   KIND BOOST
   SOURCES kafka_protocol_test.cc)
 
-seastar_add_test (kafka_retry_helper
-  SOURCES kafka_retry_helper_test.cc)
-
 seastar_add_test (lowres_clock
   SOURCES lowres_clock_test.cc)
 

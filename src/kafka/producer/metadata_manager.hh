@@ -22,31 +22,25 @@
 
 #pragma once
 
-#include <string>
-
-#include "../../../../src/kafka/connection/connection_manager.hh"
-#include "../../../../src/kafka/utils/partitioner.hh"
-#include "../../../../src/kafka/producer/metadata_manager.hh"
-
+#include "../connection/connection_manager.hh"
 #include <seastar/core/future.hh>
-#include <seastar/net/net.hh>
 
 namespace seastar {
 
 namespace kafka {
 
-class kafka_producer {
-private:
+class metadata_manager {
 
-    std::string _client_id;
+private:
     lw_shared_ptr<connection_manager> _connection_manager;
-    partitioner _partitioner;
-    metadata_manager _metadata_manager;
+    metadata_response _metadata;
 
 public:
-    explicit kafka_producer(std::string client_id);
-    seastar::future<> init(std::string server_address, uint16_t port);
-    seastar::future<> produce(std::string topic_name, std::string key, std::string value);
+    metadata_manager(lw_shared_ptr<connection_manager> &manager)
+    : _connection_manager(manager) {}
+
+    seastar::future<metadata_response> refresh_metadata();
+    metadata_response &get_metadata();
 
 };
 
