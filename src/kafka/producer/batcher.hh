@@ -22,35 +22,31 @@
 
 #pragma once
 
-#include <string>
+#include <utility>
+#include <vector>
 
-#include "../../../../src/kafka/connection/connection_manager.hh"
-#include "../../../../src/kafka/utils/partitioner.hh"
-#include "../../../../src/kafka/producer/metadata_manager.hh"
-#include "../../../../src/kafka/producer/batcher.hh"
-
-#include <seastar/core/future.hh>
-#include <seastar/net/net.hh>
+#include "sender.hh"
+#include "../utils/retry_helper.hh"
 
 namespace seastar {
 
 namespace kafka {
 
-class kafka_producer {
+class batcher {
 private:
-
-    std::string _client_id;
-    lw_shared_ptr<connection_manager> _connection_manager;
-    partitioner _partitioner;
+    std::vector<sender_message> _messages;
     lw_shared_ptr<metadata_manager> _metadata_manager;
-    batcher _batcher;
-
+    lw_shared_ptr<connection_manager> _connection_manager;
+    retry_helper _retry_helper;
 public:
-    explicit kafka_producer(std::string client_id);
-    seastar::future<> init(std::string server_address, uint16_t port);
-    seastar::future<> produce(std::string topic_name, std::string key, std::string value);
-    seastar::future<> flush();
+    batcher(lw_shared_ptr<metadata_manager> metadata_manager,
+            lw_shared_ptr<connection_manager> connection_manager)
+            : _metadata_manager(std::move(metadata_manager)),
+            _connection_manager(std::move(connection_manager)),
+            _retry_helper(60, 20, 1000) {}
 
+    void queue_message(sender_message message);
+    future<> flush();
 };
 
 }

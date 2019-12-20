@@ -588,9 +588,11 @@ add_library (seastar STATIC
   src/kafka/protocol/metadata_request.cc
   src/kafka/protocol/produce_response.cc
   src/kafka/protocol/produce_request.cc
+  src/kafka/producer/batcher.cc
   src/kafka/producer/metadata_manager.hh
   src/kafka/producer/metadata_manager.cc
   src/kafka/producer/kafka_producer.cc
+  src/kafka/producer/sender.cc
   src/kafka/utils/partitioner.cc
   src/net/arp.cc
   src/net/config.cc

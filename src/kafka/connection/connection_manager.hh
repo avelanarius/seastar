@@ -86,6 +86,7 @@ public:
             return send_future;
         }).handle_exception([] (auto ep) {
             // Handle connect exceptions.
+            // TODO: Disconnect in case of broken connection.
             try {
                 std::rethrow_exception(ep);
             } catch (seastar::timed_out_error& e) {

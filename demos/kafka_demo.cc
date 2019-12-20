@@ -64,7 +64,10 @@ int main(int ac, char** av) {
                 fprint(std::cout, "Enter value: ");
                 std::cin >> value;
 
-                producer.produce(topic, key, value).wait();
+                (void)producer.produce(topic, key, value).handle_exception([key, value](auto ep) {
+                    fprint(std::cout, "Failure sending %s %s: %s.\n", key, value, ep);
+                });
+                producer.flush().wait();
             }
         });
     });
