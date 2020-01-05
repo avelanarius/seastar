@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <atomic>
 #include "../protocol/metadata_response.hh"
 
 namespace seastar {
@@ -32,8 +33,20 @@ class partitioner {
 
 public:
 
-    metadata_response_partition get_partition(const std::string &key, const kafka_array_t<metadata_response_partition> &partitions) const;
+    virtual metadata_response_partition get_partition(const std::string &key, const kafka_array_t<metadata_response_partition> &partitions) = 0;
 
+};
+
+class basic_partitioner : public partitioner {
+public:
+    virtual metadata_response_partition get_partition(const std::string &key, const kafka_array_t<metadata_response_partition> &partitions);
+};
+
+class rr_partitioner : public partitioner {
+public:
+    virtual metadata_response_partition get_partition(const std::string &key, const kafka_array_t<metadata_response_partition> &partitions);
+private:
+    std::atomic_uint32_t counter;
 };
 
 }

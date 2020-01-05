@@ -41,7 +41,7 @@ private:
 
     std::string _client_id;
     lw_shared_ptr<connection_manager> _connection_manager;
-    partitioner _partitioner;
+    partitioner* _partitioner = new basic_partitioner();
     lw_shared_ptr<metadata_manager> _metadata_manager;
     batcher _batcher;
 

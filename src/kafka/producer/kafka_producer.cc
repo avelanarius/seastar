@@ -66,7 +66,7 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
     auto partition_index = 0;
     for (const auto& topic : *metadata._topics) {
         if (*topic._name == topic_name) {
-            partition_index = *_partitioner.get_partition(key, topic._partitions)._partition_index;
+            partition_index = *_partitioner->get_partition(key, topic._partitions)._partition_index;
             break;
         }
     }
