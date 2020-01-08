@@ -46,7 +46,7 @@ class rr_partitioner : public partitioner {
 public:
     virtual metadata_response_partition get_partition(const std::string &key, const kafka_array_t<metadata_response_partition> &partitions);
 private:
-    std::atomic_uint32_t counter;
+    uint32_t counter;
 };
 
 }

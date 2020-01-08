@@ -47,6 +47,7 @@ namespace kafka {
 kafka_producer::kafka_producer(std::string client_id)
     : _client_id(std::move(client_id)),
       _connection_manager(make_lw_shared<connection_manager>(_client_id)),
+      _partitioner(std::unique_ptr<partitioner>(new basic_partitioner())),
       _metadata_manager(make_lw_shared<metadata_manager>(_connection_manager)),
       _batcher(_metadata_manager, _connection_manager) {}
 
