@@ -21,6 +21,7 @@
  */
 
 #include "partitioner.hh"
+#include <boost/functional/hash.hpp>
 
 namespace seastar {
 
@@ -32,7 +33,14 @@ metadata_response_partition basic_partitioner::get_partition(const std::string &
 }
 
 metadata_response_partition rr_partitioner::get_partition(const std::string &key, const kafka_array_t<metadata_response_partition> &partitions) {
-    return partitions[(counter++) % partitions->size()];
+    if(key.size() > 0) {
+        boost::hash<std::string> key_hash;
+        std::size_t h = key_hash(key);
+        return partitions[h % partitions->size()];
+    }
+    else {
+        return partitions[(counter++) % partitions->size()];
+    }
 }
 
 }
