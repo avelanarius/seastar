@@ -39,6 +39,7 @@
 
 #include <seastar/core/print.hh>
 #include <seastar/kafka/producer/kafka_producer.hh>
+#include <seastar/kafka/producer/producer_properties.hh>
 
 namespace seastar {
 
