@@ -22,33 +22,25 @@
 
 #pragma once
 
-#include <utility>
-#include <vector>
+#include <functional>
+#include <memory>
 
-#include "sender.hh"
-#include "../utils/retry_helper.hh"
+#include "../../../../src/kafka/utils/partitioner.hh"
+
+#include <seastar/core/future.hh>
 
 namespace seastar {
 
 namespace kafka {
 
-class batcher {
-private:
-    std::vector<sender_message> _messages;
-    lw_shared_ptr<metadata_manager> _metadata_manager;
-    lw_shared_ptr<connection_manager> _connection_manager;
-    retry_helper _retry_helper;
-public:
-    batcher(lw_shared_ptr<metadata_manager> metadata_manager,
-            lw_shared_ptr<connection_manager> connection_manager,
-            uint32_t max_retries, const std::function<future<>(uint32_t)> &retry_strategy)
-            : _metadata_manager(std::move(metadata_manager)),
-            _connection_manager(std::move(connection_manager)),
-            _retry_helper(max_retries, retry_strategy) {}
+namespace defaults {
 
-    void queue_message(sender_message message);
-    future<> flush(uint32_t connection_timeout);
-};
+std::function<future<>(uint32_t)> exp_retry_backoff(uint32_t base_ms, uint32_t max_backoff_ms);
+
+std::unique_ptr<partitioner> round_robin_partitioner();
+std::unique_ptr<partitioner> random_partitioner();
+
+}
 
 }
 

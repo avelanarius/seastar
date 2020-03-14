@@ -29,8 +29,11 @@ namespace seastar {
 namespace kafka {
 
 sender::sender(lw_shared_ptr<connection_manager> connection_manager,
-        lw_shared_ptr<metadata_manager> metadata_manager)
-            : _connection_manager(std::move(connection_manager)), _metadata_manager(std::move(metadata_manager)) {}
+        lw_shared_ptr<metadata_manager> metadata_manager,
+        uint32_t connection_timeout)
+            : _connection_manager(std::move(connection_manager)),
+            _metadata_manager(std::move(metadata_manager)),
+            _connection_timeout(connection_timeout) {}
 
 std::optional<sender::connection_id> sender::broker_for_topic_partition(const std::string& topic, int32_t partition_index) {
     // TODO: Improve complexity from O(N) to O(log N).
@@ -132,7 +135,7 @@ void sender::queue_requests() {
             req._topics->push_back(topic_data);
         }
 
-        _responses.emplace_back(_connection_manager->send(req, broker.first, broker.second)
+        _responses.emplace_back(_connection_manager->send(req, broker.first, broker.second, _connection_timeout)
             .then([broker](auto response) {
                 return std::make_pair(broker, response);
         }));
@@ -143,6 +146,7 @@ void sender::set_error_code_for_broker(const sender::connection_id& broker, cons
     for (auto& [topic, messages_by_partition] : _messages_split_by_broker_topic_partition[broker]) {
         for (auto& [partition, messages] : messages_by_partition) {
             for (auto& message : messages) {
+                (void)topic; (void)partition;
                 message->_error_code = error_code;
             }
         }
