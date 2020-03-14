@@ -3,7 +3,7 @@ data "docker_registry_image" "kafka" {
 }
 
 resource "docker_image" "kafka" {
-  name          = "docker.io/${data.docker_registry_image.kafka.name}"
+  name          = "${data.docker_registry_image.kafka.name}"
   pull_triggers = [data.docker_registry_image.kafka.sha256_digest]
   keep_locally  = true
 }

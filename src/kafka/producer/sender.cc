@@ -141,6 +141,7 @@ void sender::set_error_code_for_broker(const sender::connection_id& broker, cons
     for (auto& [topic, messages_by_partition] : _messages_split_by_broker_topic_partition[broker]) {
         for (auto& [partition, messages] : messages_by_partition) {
             for (auto& message : messages) {
+                (void)topic; (void)partition;
                 message->_error_code = error_code;
             }
         }

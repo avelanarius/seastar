@@ -3,7 +3,7 @@ data "docker_registry_image" "zookeeper" {
 }
 
 resource "docker_image" "zookeeper" {
-  name          = "docker.io/${data.docker_registry_image.zookeeper.name}"
+  name          = "${data.docker_registry_image.zookeeper.name}"
   pull_triggers = [data.docker_registry_image.zookeeper.sha256_digest]
   keep_locally  = true
 }
