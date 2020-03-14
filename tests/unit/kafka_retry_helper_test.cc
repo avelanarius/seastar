@@ -22,6 +22,7 @@
 
 #include <seastar/testing/thread_test_case.hh>
 #include <seastar/testing/test_runner.hh>
+#include <seastar/kafka/utils/defaults.hh>
 #include <boost/test/included/unit_test.hpp>
 #include <vector>
 
@@ -30,7 +31,7 @@
 using namespace seastar;
 
 SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_early_stop) {
-    kafka::retry_helper helper(5, 1, 1000);
+    kafka::retry_helper helper(5, kafka::defaults::exp_retry_backoff(1, 1000));
     auto retry_count = 0;
     auto data = 0;
     helper.with_retry([&retry_count, data]() mutable {
@@ -45,7 +46,7 @@ SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_early_stop) {
 }
 
 SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_capped_retries) {
-    kafka::retry_helper helper(5, 1, 1000);
+    kafka::retry_helper helper(5, kafka::defaults::exp_retry_backoff(1, 1000));
     auto retry_count = 0;
     helper.with_retry([&retry_count] {
         retry_count++;
@@ -55,7 +56,7 @@ SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_capped_retries) {
 }
 
 SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_future) {
-    kafka::retry_helper helper(5, 1, 1000);
+    kafka::retry_helper helper(5, kafka::defaults::exp_retry_backoff(1, 1000));
     auto retry_count = 0;
     helper.with_retry([&retry_count] {
         retry_count++;
@@ -65,7 +66,7 @@ SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_future) {
 }
 
 SEASTAR_THREAD_TEST_CASE(kafka_retry_helper_test_modify_data) {
-    kafka::retry_helper helper(5, 1, 1000);
+    kafka::retry_helper helper(5, kafka::defaults::exp_retry_backoff(1, 1000));
     auto retry_count = 0;
     std::vector<int> data{1, 2, 3};
     std::vector<int> retry_data;

@@ -42,9 +42,14 @@ int main(int ac, char** av) {
             uint16_t port = config["port"].as<uint16_t>();
             (void) port;
 
-            kafka::kafka_producer producer("seastar-kafka-demo");
-            fprint(std::cout, "Producer built\n\n");
-            producer.init(host, port).wait();
+            kafka::producer_properties properties;
+            properties._client_id = "seastar-kafka-demo";
+            properties._servers = {
+                    {host, port}
+            };
+
+            kafka::kafka_producer producer(std::move(properties));
+            producer.init().wait();
             fprint(std::cout, "Producer initialized and ready to send\n\n");
 
             std::string topic, key, value;
