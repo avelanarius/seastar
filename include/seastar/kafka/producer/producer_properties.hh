@@ -24,8 +24,12 @@
 
 #include <vector>
 #include <string>
+#include <functional>
+
+#include "../../../../src/kafka/utils/partitioner.hh"
 
 #include <seastar/util/bool_class.hh>
+#include <seastar/kafka/utils/defaults.hh>
 
 namespace seastar {
 
@@ -55,17 +59,14 @@ public:
     uint32_t _retries = 10;
     uint32_t _batch_size = 16384;
     uint32_t _request_timeout = 500;
-    uint32_t _retry_backoff = 100;
     uint32_t _metadata_refresh = 300000;
-    // uint32_t _ide_connection_timeout = 540000;
-    // uint32_t _transaction_timeout = 6000;
 
     std::string _client_id {};
     std::string _transactional_id {};
     std::vector<std::pair<std::string, uint16_t>> _servers {};
-    // key_serializer
-    // value_serializer
-    // partitioner
+
+    std::unique_ptr<partitioner> _partitioner = defaults::round_robin_partitioner();
+    std::function<future<>(uint32_t)> _retry_backoff_strategy = defaults::exp_retry_backoff(20, 1000);
 
 };
 

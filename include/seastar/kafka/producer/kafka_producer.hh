@@ -31,6 +31,7 @@
 
 #include <seastar/core/future.hh>
 #include <seastar/net/net.hh>
+#include <seastar/kafka/producer/producer_properties.hh>
 
 namespace seastar {
 
@@ -39,15 +40,14 @@ namespace kafka {
 class kafka_producer {
 private:
 
-    std::string _client_id;
+    producer_properties _properties;
     lw_shared_ptr<connection_manager> _connection_manager;
-    std::unique_ptr<partitioner> _partitioner;
     lw_shared_ptr<metadata_manager> _metadata_manager;
     batcher _batcher;
 
 public:
-    explicit kafka_producer(std::string client_id);
-    seastar::future<> init(std::string server_address, uint16_t port);
+    explicit kafka_producer(producer_properties&& properties);
+    seastar::future<> init();
     seastar::future<> produce(std::string topic_name, std::string key, std::string value);
     seastar::future<> flush();
 

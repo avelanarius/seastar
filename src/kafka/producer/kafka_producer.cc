@@ -45,19 +45,20 @@ namespace seastar {
 
 namespace kafka {
 
-kafka_producer::kafka_producer(std::string client_id)
-    : _client_id(std::move(client_id)),
-      _connection_manager(make_lw_shared<connection_manager>(_client_id)),
-      _partitioner(std::unique_ptr<partitioner>(new basic_partitioner())),
+kafka_producer::kafka_producer(producer_properties&& properties)
+    : _properties(std::move(properties)),
+      _connection_manager(make_lw_shared<connection_manager>(_properties._client_id)),
       _metadata_manager(make_lw_shared<metadata_manager>(_connection_manager)),
-      _batcher(_metadata_manager, _connection_manager) {}
+      _batcher(_metadata_manager, _connection_manager, _properties._retries, _properties._retry_backoff_strategy) {}
 
-seastar::future<> kafka_producer::init(std::string server_address, uint16_t port) {
-    auto connection_future = _connection_manager->connect(server_address, port);
+seastar::future<> kafka_producer::init() {
+    std::vector<future<lw_shared_ptr<kafka_connection>>> fs;
 
-    // TODO ApiVersions
+    std::transform(_properties._servers.begin(), _properties._servers.end(), fs.begin(), [=] (auto server) {
+        return _connection_manager->connect(server.first, server.second, _properties._request_timeout);
+    });
 
-    return connection_future.discard_result().then([this] {
+    return when_all_succeed(fs.begin(), fs.end()).discard_result().then([this] {
         return _metadata_manager->refresh_metadata().discard_result();
     });
 }
@@ -68,7 +69,7 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
     auto partition_index = 0;
     for (const auto& topic : *metadata._topics) {
         if (*topic._name == topic_name) {
-            partition_index = *_partitioner->get_partition(key, topic._partitions)._partition_index;
+            partition_index = *_properties._partitioner->get_partition(key, topic._partitions)._partition_index;
             break;
         }
     }
@@ -85,7 +86,7 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
 }
 
 seastar::future<> kafka_producer::flush() {
-    return _batcher.flush();
+    return _batcher.flush(_properties._request_timeout);
 }
 
 }

@@ -54,12 +54,12 @@ public:
         _connect_semaphore(1),
         _send_semaphore(1) {}
 
-    future<lw_shared_ptr<kafka_connection>> connect(const std::string& host, uint16_t port);
+    future<lw_shared_ptr<kafka_connection>> connect(const std::string& host, uint16_t port, uint32_t timeout);
     std::optional<lw_shared_ptr<kafka_connection>> get_connection(const connection_id& connection);
     future<> disconnect(const connection_id& connection);
 
     template<typename RequestType>
-    future<typename RequestType::response_type> send(RequestType request, const std::string& host, uint16_t port) {
+    future<typename RequestType::response_type> send(RequestType request, const std::string& host, uint16_t port, uint32_t timeout) {
         // In order to preserve ordering of sends, a semaphore with
         // count = 1 is used due to its FIFO guarantees.
         //
@@ -77,8 +77,8 @@ public:
         // returned as future<future<response>> and "unpacked"
         // outside the semaphore - scheduling inside semaphore
         // (only 1 at the time) and waiting for result outside it.
-        return with_semaphore(_send_semaphore, 1, [this, request = std::move(request), host, port] {
-            return connect(host, port).then([request = std::move(request)](auto conn) {
+        return with_semaphore(_send_semaphore, 1, [this, request = std::move(request), host, port, timeout] {
+            return connect(host, port, timeout).then([request = std::move(request)](auto conn) {
                 auto send_future = conn->send(std::move(request)).finally([conn]{});
                 return make_ready_future<decltype(send_future)>(std::move(send_future));
             });
