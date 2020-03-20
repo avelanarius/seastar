@@ -23,12 +23,9 @@
 #pragma once
 
 #include <cstdint>
-#include <cmath>
-#include <random>
-#include <chrono>
+#include <functional>
 
 #include <seastar/core/future.hh>
-#include <seastar/core/sleep.hh>
 #include <seastar/util/bool_class.hh>
 
 namespace seastar {
@@ -41,18 +38,15 @@ using do_retry = bool_class<do_retry_tag>;
 class retry_helper {
 private:
     uint32_t _max_retry_count;
-    float _base_ms;
-    uint32_t _max_backoff_ms;
 
-    std::random_device _rd;
-    std::mt19937 _mt;
+    std::function<future<>(uint32_t)> _backoff;
 
     template<typename AsyncAction>
     future<> with_retry(AsyncAction&& action, uint32_t retry_number) {
         if (retry_number >= _max_retry_count) {
             return make_ready_future<>();
         }
-        return backoff(retry_number)
+        return _backoff(retry_number)
         .then([this, action = std::forward<AsyncAction>(action), retry_number]() mutable {
             return futurize_apply(action)
             .then([this, action = std::forward<AsyncAction>(action), retry_number](auto do_retry_val) mutable {
@@ -65,25 +59,9 @@ private:
         });
     }
 
-    future<> backoff(uint32_t retry_number) {
-        if (retry_number == 0) {
-            return make_ready_future<>();
-        }
-
-        // Exponential backoff with (full) jitter
-        auto backoff_time = _base_ms * std::pow(2.0f, retry_number - 1);
-        auto backoff_time_discrete = static_cast<uint32_t>(std::round(backoff_time));
-
-        auto capped_backoff_time = std::min(_max_backoff_ms, backoff_time_discrete);
-        std::uniform_int_distribution<uint32_t> dist(0, capped_backoff_time);
-
-        auto jittered_backoff = dist(_mt);
-        return seastar::sleep(std::chrono::milliseconds(jittered_backoff));
-    }
-
 public:
-    retry_helper(uint32_t max_retry_count, float base_ms, uint32_t max_backoff_ms)
-        : _max_retry_count(max_retry_count), _base_ms(base_ms), _max_backoff_ms(max_backoff_ms), _mt(_rd()) {}
+    retry_helper(uint32_t max_retry_count, std::function<future<>(uint32_t)> backoff)
+        : _max_retry_count(max_retry_count), _backoff(std::move(backoff)) {}
 
     template<typename AsyncAction>
     future<> with_retry(AsyncAction&& action) {

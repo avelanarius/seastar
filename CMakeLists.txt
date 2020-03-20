@@ -594,6 +594,7 @@ add_library (seastar STATIC
   src/kafka/producer/kafka_producer.cc
   src/kafka/producer/sender.cc
   src/kafka/utils/partitioner.cc
+  src/kafka/utils/defaults.cc
   src/net/arp.cc
   src/net/config.cc
   src/net/dhcp.cc

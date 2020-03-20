@@ -30,8 +30,8 @@ void batcher::queue_message(sender_message message) {
     _messages.emplace_back(std::move(message));
 }
 
-future<> batcher::flush() {
-    return do_with(sender(_connection_manager, _metadata_manager), [this](sender& sender) {
+future<> batcher::flush(uint32_t connection_timeout) {
+    return do_with(sender(_connection_manager, _metadata_manager, connection_timeout), [this](sender& sender) {
         bool is_batch_loaded = false;
         return _retry_helper.with_retry([this, &sender, is_batch_loaded]() mutable {
             // It is important to move messages from current batch
