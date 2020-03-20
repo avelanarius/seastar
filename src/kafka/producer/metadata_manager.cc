@@ -21,25 +21,60 @@
  */
 
 #include "metadata_manager.hh"
+#include <seastar/core/sleep.hh>
+#include <seastar/core/thread.hh>
 
 namespace seastar {
 
 namespace kafka {
 
-    seastar::future<metadata_response> metadata_manager::refresh_metadata() {
+    seastar::future<> metadata_manager::refresh_metadata() {
         kafka::metadata_request req;
 
         req._allow_auto_topic_creation = true;
         req._include_cluster_authorized_operations = true;
         req._include_topic_authorized_operations = true;
 
-        return _connection_manager->ask_for_metadata(req).then([this] (metadata_response metadata){
-            return (_metadata = metadata);
+        return _connection_manager->ask_for_metadata(req).then([this, req] (metadata_response metadata) {
+            _metadata_sem.wait(1).wait();
+            _metadata = metadata;
+            _metadata_sem.signal();
+            return;
         });
     }
 
-    metadata_response& metadata_manager::get_metadata() {
-        return _metadata;
+    seastar::future<> metadata_manager::refresh_coroutine(std::chrono::seconds dur) {
+        return seastar::async({}, [this, dur]{
+            while(_keep_refreshing) {
+                refresh_metadata().wait();
+                try {
+                    seastar::sleep_abortable(dur, _stop_refresh).get();
+                } catch (seastar::sleep_aborted e) {}
+            }
+            _refresh_finished.signal();
+            return;
+        });
+    }
+
+    seastar::future<metadata_response> metadata_manager::get_metadata() {
+        return seastar::async({}, [this] {
+            _metadata_sem.wait(1).wait();
+            metadata_response metadata = _metadata;
+            _metadata_sem.signal();
+            return metadata;
+        });
+    }
+
+    void metadata_manager::start_refresh() {
+        _keep_refreshing = true;
+        using namespace std::chrono_literals;
+        (void) refresh_coroutine(5s);
+    }
+
+    void metadata_manager::stop_refresh() {
+        _keep_refreshing = false;
+        _stop_refresh.request_abort();
+        _refresh_finished.wait(1).wait();
     }
 }
 

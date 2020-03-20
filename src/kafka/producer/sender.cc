@@ -34,7 +34,8 @@ sender::sender(lw_shared_ptr<connection_manager> connection_manager,
 
 std::optional<sender::connection_id> sender::broker_for_topic_partition(const std::string& topic, int32_t partition_index) {
     // TODO: Improve complexity from O(N) to O(log N).
-    for (const auto &current_topic : *_metadata_manager->get_metadata()._topics) {
+    metadata_response metadata = _metadata_manager->get_metadata().get0();
+    for (const auto &current_topic : *metadata._topics) {
         if (*current_topic._name != topic) {
             continue;
         }
@@ -52,7 +53,8 @@ std::optional<sender::connection_id> sender::broker_for_topic_partition(const st
 }
 
 sender::connection_id sender::broker_for_id(int32_t id) {
-    for (const auto& broker : *_metadata_manager->get_metadata()._brokers) {
+    metadata_response metadata = _metadata_manager->get_metadata().get0();
+    for (const auto& broker : *metadata._brokers) {
         if (*broker._node_id == id) {
             return {*broker._host, *broker._port};
         }

@@ -34,6 +34,11 @@ namespace seastar {
 
 namespace kafka {
 
+struct metadata_refresh_exception : public std::runtime_error {
+public:
+    metadata_refresh_exception(const std::string& message) : runtime_error(message) {}
+};
+
 class connection_manager {
 public:
 

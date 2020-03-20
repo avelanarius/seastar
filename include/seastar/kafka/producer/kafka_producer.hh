@@ -50,6 +50,7 @@ public:
     seastar::future<> init(std::string server_address, uint16_t port);
     seastar::future<> produce(std::string topic_name, std::string key, std::string value);
     seastar::future<> flush();
+    seastar::future<> disconnect();
 
 };
 
