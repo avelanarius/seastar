@@ -43,6 +43,7 @@ int main(int ac, char** av) {
             (void) port;
 
             kafka::kafka_producer producer("seastar-kafka-demo");
+            fprint(std::cout, "Producer built\n\n");
             producer.init(host, port).wait();
             fprint(std::cout, "Producer initialized and ready to send\n\n");
 
@@ -54,7 +55,7 @@ int main(int ac, char** av) {
                 std::cin >> topic;
 
                 if (topic == "q") {
-                    // TODO: Close connections.
+                    producer.disconnect().wait();
                     fprint(std::cout, "Finished succesfully!\n");
                     break;
                 }

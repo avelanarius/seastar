@@ -21,6 +21,7 @@
  */
 
 #include "connection_manager.hh"
+#include <seastar/core/thread.hh>
 
 namespace seastar {
 
@@ -56,7 +57,20 @@ future<> connection_manager::disconnect(const connection_id& connection) {
 }
 
 future<metadata_response> connection_manager::ask_for_metadata(const seastar::kafka::metadata_request &request) {
-    return _connections.begin()->second->send(request);
+    return seastar::async({}, [this, request]{
+        auto it = _connections.begin();
+        metadata_response res;
+        while (it != _connections.end())
+        {
+            res =  it->second->send(request).get0();
+            if (res._error_code == error::kafka_error_code::NONE) {
+                return res;
+            }
+            it++;
+        }
+        throw metadata_refresh_exception("No brokers responded.");
+        return res;
+    });
 }
 
 }

@@ -38,6 +38,7 @@
 #include <boost/iostreams/device/array.hpp>
 
 #include <seastar/core/print.hh>
+#include <seastar/core/thread.hh>
 #include <seastar/kafka/producer/kafka_producer.hh>
 
 namespace seastar {
@@ -53,38 +54,41 @@ kafka_producer::kafka_producer(std::string client_id)
 
 seastar::future<> kafka_producer::init(std::string server_address, uint16_t port) {
     auto connection_future = _connection_manager->connect(server_address, port);
-
-    // TODO ApiVersions
-
-    return connection_future.discard_result().then([this] {
+    return connection_future.discard_result().then( [this]{
+        _metadata_manager->start_refresh();
         return _metadata_manager->refresh_metadata().discard_result();
     });
 }
 
 seastar::future<> kafka_producer::produce(std::string topic_name, std::string key, std::string value) {
-    metadata_response& metadata = _metadata_manager->get_metadata();
+    return _metadata_manager->get_metadata().then([this, topic_name, key, value](metadata_response metadata){
 
-    auto partition_index = 0;
-    for (const auto& topic : *metadata._topics) {
-        if (*topic._name == topic_name) {
-            partition_index = *_partitioner->get_partition(key, topic._partitions)._partition_index;
-            break;
+        auto partition_index = 0;
+        for (const auto& topic : *metadata._topics) {
+            if (*topic._name == topic_name) {
+                partition_index = *_partitioner->get_partition(key, topic._partitions)._partition_index;
+                break;
+            }
         }
-    }
 
-    sender_message message;
-    message._topic = std::move(topic_name);
-    message._key = std::move(key);
-    message._value = std::move(value);
-    message._partition_index = partition_index;
-    
-    auto send_future = message._promise.get_future();
-    _batcher.queue_message(std::move(message));
-    return send_future;
+        sender_message message;
+        message._topic = std::move(topic_name);
+        message._key = std::move(key);
+        message._value = std::move(value);
+        message._partition_index = partition_index;
+
+        auto send_future = message._promise.get_future();
+        _batcher.queue_message(std::move(message));
+        return send_future;
+    });
 }
 
 seastar::future<> kafka_producer::flush() {
     return _batcher.flush();
+}
+
+seastar::future<> kafka_producer::disconnect() {
+    return seastar::async({}, [this] {return _metadata_manager->stop_refresh();});
 }
 
 }
